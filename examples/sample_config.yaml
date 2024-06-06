@@ -1,0 +1,11 @@
+devices:
+    my_dict:
+        module: builtins
+        class: dict
+        kwds:
+            key0: my_val
+    my_val:
+        module: builtins
+        class: str
+        args:
+        - val0

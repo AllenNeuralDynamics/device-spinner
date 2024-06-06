@@ -1,9 +1,9 @@
 """Class for constructing devices from a yaml file with the factory pattern."""
 
-from pathlib import Path
 import copy
 import importlib
 import logging
+from pathlib import Path
 
 ARGUMENTS = "args"
 SKIP_ARGUMENTS = "skip_args"    # List of args with names identical to instance
@@ -38,12 +38,13 @@ class DeviceSpinner:
 
     def _create_device(self, instance_name: str, device_spec: dict,
                        spec_trees: dict, print_level=0):
+        """Instantiate device and dependendent devices recursively."""
         instance_names = spec_trees.keys()
         args = copy.deepcopy(device_spec.get(ARGUMENTS, []))
         skip_args = device_spec.get(SKIP_ARGUMENTS, [])
         skip_kwds = device_spec.get(SKIP_KEYWORDS, [])
         kwds = copy.deepcopy(device_spec.get(KEYWORDS, {}))
-        module = importlib.import_module(device_spec["module"])
+        module = importlib.import_module(device_spec[MODULE])
         cls = getattr(module, device_spec["class"])
         # TODO: handle edge case where object arguments are iterable.
         #   i.e: MyClass([my_other_instance]) vs MyClass(my_other_instance)

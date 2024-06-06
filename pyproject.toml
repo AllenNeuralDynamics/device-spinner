@@ -17,6 +17,8 @@ readme = "README.md"
 dynamic = ["version"]
 
 dependencies = [
+    "toml >= 0.10.2",
+    "ruamel.yaml >= 0.17.35",
 ]
 
 [project.optional-dependencies]
