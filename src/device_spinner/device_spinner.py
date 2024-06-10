@@ -4,6 +4,7 @@ import copy
 import importlib
 import logging
 from pathlib import Path
+from typing import Union
 
 ARGUMENTS = "args"
 SKIP_ARGUMENTS = "skip_args"    # List of args with names identical to instance
@@ -18,6 +19,16 @@ SKIP_KEYWORDS = "skip_kwds" # List of kwds with names identical to instance
 MODULE = "module"
 CLASS = "class"
 
+
+def gen_enumerate(iterable: Union[dict, list]):
+    """provide a generic way to enumerate through dictionaries and lists."""
+    if isinstance(iterable, list):
+        return enumerate(iterable)
+    if isinstance(iterable, dict):
+        return iterable.items()
+    raise TypeError(f"{iterable} is not iterable.")
+
+
 class DeviceSpinner:
 
     def __init__(self):
@@ -28,6 +39,7 @@ class DeviceSpinner:
 
     def create_devices_from_specs(self, spec_trees: dict):
         # Construct all devices in device_list.
+        self.instance_names = spec_trees.keys()
         for instance_name, init_specifications in spec_trees.items():
             # Skip already-constructed devices.
             if instance_name in self.devices:
@@ -39,43 +51,56 @@ class DeviceSpinner:
     def _create_device(self, instance_name: str, device_spec: dict,
                        spec_trees: dict, print_level=0):
         """Instantiate device and dependendent devices recursively."""
-        instance_names = spec_trees.keys()
         args = copy.deepcopy(device_spec.get(ARGUMENTS, []))
-        skip_args = device_spec.get(SKIP_ARGUMENTS, [])
-        skip_kwds = device_spec.get(SKIP_KEYWORDS, [])
+        argvals_to_skip = device_spec.get(SKIP_ARGUMENTS, [])
+        kwdvals_to_skip = device_spec.get(SKIP_KEYWORDS, [])
         kwds = copy.deepcopy(device_spec.get(KEYWORDS, {}))
         module = importlib.import_module(device_spec[MODULE])
         cls = getattr(module, device_spec["class"])
-        # TODO: handle edge case where object arguments are iterable.
-        #   i.e: MyClass([my_other_instance]) vs MyClass(my_other_instance)
         # Populate args and kwds with any dependencies from device_list.
         # Build this instance's positional argument dependencies.
-        for index, arg_value in enumerate(args):
-            if arg_value in instance_names and arg_value not in skip_args:
-                if arg_value not in self.devices:
-                    sub_device_spec = spec_trees[arg_value]
-                    #print(4*(print_level+1)*" " + f"Creating {instance_name}")
-                    self.devices[arg_value] = self._create_device(arg_value,
-                                                                  sub_device_spec,
-                                                                  spec_trees,
-                                                                  print_level+1)
-                # Populate the arg index with the object.
-                args[index] = self.devices[arg_value]
+        self.log.debug(f"{4*print_level*' '}"
+                       f"Building {instance_name} args.")
+        args = self._create_nested_arg_value(args, argvals_to_skip, spec_trees,
+                                             print_level+1)
         # Build this instance's keyword argument dependencies.
-        for kwd, kwd_value in kwds.items():
-            if kwd_value in instance_names and kwd_value not in skip_kwds:
-                if kwd_value not in self.devices:
-                    sub_device_spec = spec_trees[kwd_value]
-                    #print(4*(print_level+1)*" " + f"Creating {kwd_value}")
-                    self.devices[kwd_value] = self._create_device(kwd_value,
-                                                                  sub_device_spec,
-                                                                  spec_trees,
-                                                                  print_level+1)
-                # Populate keyword value with the object.
-                kwds[kwd] = self.devices[kwd_value]
+        self.log.debug(f"{4*print_level*' '}"
+                       f"Building {instance_name} kwd values.")
+        kwds = self._create_nested_arg_value(kwds, kwdvals_to_skip, spec_trees,
+                                             print_level+1)
         # Instantiate class.
         self.log.debug(f"{4*print_level*' '}"
                        f"{instance_name} = {cls.__name__}(" +
                        f"{', '.join([str(a) for a in args])}"
                        f"{', '.join([str(k)+'='+str(v) for k,v in kwds.items()])})")
         return cls(*args, **kwds)
+
+    def _create_nested_arg_value(self, arg_val, argvals_to_skip, spec_trees,
+                                 print_level):
+        """Take a recursively-nested list or dictionary and return it with
+            named instances replaced with their instances. Populate
+            :attr:`~.DeviceSpinner.devices` with any built instances along the
+            way.
+        """
+        try: #i.e: arg_val is iterable as a dict or list.
+            # General case. Iterate through each arg_val and build sub-devices.
+            for key, item in gen_enumerate(arg_val):
+                if not isinstance(item, str):
+                    continue
+                arg_val[key] = self._create_nested_arg_value(item,
+                                                             argvals_to_skip,
+                                                             spec_trees,
+                                                             print_level+1)
+            return arg_val
+        except TypeError:
+            pass
+        # Base case. Build the flat argument value or return the original as-is.
+        if arg_val in self.instance_names and arg_val not in argvals_to_skip:
+            device_spec = spec_trees[arg_val]
+            self.devices[arg_val] = self._create_device(arg_val, device_spec,
+                                                        spec_trees,
+                                                        print_level+1)
+            return self.devices[arg_val]
+        else:
+            return arg_val
+

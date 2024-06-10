@@ -3,8 +3,9 @@ devices:
         module: builtins
         class: dict
         kwds:
-            key0: my_val
-    my_val:
+            key0: my_val_instance
+            key1: my_fixed_val
+    my_val_instance:
         module: builtins
         class: str
         args:
