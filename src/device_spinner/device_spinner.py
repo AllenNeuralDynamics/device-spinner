@@ -49,8 +49,15 @@ class DeviceSpinner:
         return self.devices
 
     def _create_device(self, instance_name: str, device_spec: dict,
-                       spec_trees: dict, print_level=0):
-        """Instantiate device and dependendent devices recursively."""
+                       spec_trees: dict, _print_level=0):
+        """Instantiate device and dependendent devices and populate them in
+        self.devices keyed by instance_name. Recursive.
+
+        :param instance_name:
+        :param device_spec:
+        :param spec_trees:
+        :param _print_level:
+        """
         self.log.debug(f"{2*print_level*' '}"
                        f"Creating {instance_name}")
         args = copy.deepcopy(device_spec.get(ARGUMENTS, []))
@@ -74,11 +81,23 @@ class DeviceSpinner:
         return cls(*args, **kwds)
 
     def _create_nested_arg_value(self, arg_val, argvals_to_skip, spec_trees,
-                                 print_level):
-        """Take a recursively-nested list or dictionary and return it with
+                                 _print_level=0):
+        """Take a nested list or dictionary and return it with
             named instances replaced with their instances. Populate
             :attr:`~.DeviceSpinner.devices` with any built instances along the
-            way.
+            way. Recursive.
+
+        :param arg_val: input argument value from the device spec for which to
+            populate as an arg when instantiating an object.
+            Strings with object instances of the same name in the device tree
+            will be replaced with the instantiate object.
+        :param argvals_to_skip: strings in `argval` with names in this list
+            will not be populated with object instances of the same name.
+        :param spec_trees: dictionary of one or more trees containing object
+            instance names, dependencies, and parameters specifying how to
+            instantiate them.
+        :param _print_level: for debug output logs, this value specifies the
+            indentation level to better represent the tree structures.
         """
         try: #i.e: arg_val is iterable as a dict or list.
             # General case. Iterate through each arg_val and build sub-devices.
