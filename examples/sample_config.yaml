@@ -10,3 +10,7 @@ devices:
         class: str
         args:
         - val0
+    my_list:
+        module: builtins
+        class: list
+        args: [[0, 1, 2, 3]]

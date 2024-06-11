@@ -34,7 +34,7 @@ class DeviceSpinner:
     def __init__(self):
         self.devices = {}
         self.print_level = 0
-        self.log = logging.getLogger(f"self.__class__.name")
+        self.log = logging.getLogger(f"self.__class__.__name__")
         pass
 
     def create_devices_from_specs(self, spec_trees: dict):
@@ -51,7 +51,7 @@ class DeviceSpinner:
     def _create_device(self, instance_name: str, device_spec: dict,
                        spec_trees: dict, print_level=0):
         """Instantiate device and dependendent devices recursively."""
-        self.log.debug(f"{4*print_level*' '}"
+        self.log.debug(f"{2*print_level*' '}"
                        f"Creating {instance_name}")
         args = copy.deepcopy(device_spec.get(ARGUMENTS, []))
         argvals_to_skip = device_spec.get(SKIP_ARGUMENTS, [])
@@ -67,7 +67,7 @@ class DeviceSpinner:
         kwds = self._create_nested_arg_value(kwds, kwdvals_to_skip, spec_trees,
                                              print_level+1)
         # Instantiate class.
-        self.log.debug(f"{4*print_level*' '}"
+        self.log.debug(f"{2*print_level*' '}"
                        f"{instance_name} = {cls.__name__}(" +
                        f"{', '.join([str(a) for a in args])}"
                        f"{', '.join([str(k)+'='+str(v) for k,v in kwds.items()])})")
@@ -97,7 +97,7 @@ class DeviceSpinner:
         if arg_val in argvals_to_skip:
             return arg_val
         # Base case. Build the flat argument value or return the original as-is.
-        self.log.debug(f"{4*print_level*' '}"
+        self.log.debug(f"{2*print_level*' '}"
                        f"Building {arg_val}")
         device_spec = spec_trees[arg_val]
         self.devices[arg_val] = self._create_device(arg_val, device_spec,
