@@ -5,8 +5,8 @@
 ![Interrogate](https://img.shields.io/badge/interrogate-100.0%25-brightgreen)
 ![Python](https://img.shields.io/badge/python->=3.7-blue?logo=python)
 
-Create complex Python objects from yaml files.
-This library implements the factory design pattern to create objects from a configuration file.
+Create complex Python objects from dicts and yaml files.
+This library implements the factory design pattern to create objects from a specification file.
 
 ## Why do this?
 Building complex objects from a yaml file:
