@@ -1,0 +1,24 @@
+devices:
+    lightsheet_microscope:
+        module: __main__
+        class: Microscope
+        kwds:
+            camera: camera0
+            lasers: [laser0, laser1] # each string will be replaced by instance.
+    laser0:
+        module: __main__
+        class: Laser
+        kwds:
+            serial_port:
+                /dev/ttyACM0
+
+    laser1:
+        module: __main__
+        class: Laser
+        kwds:
+            serial_port:
+                /dev/ttyACM1
+
+    camera0:
+        module: __main__
+        class: Camera
