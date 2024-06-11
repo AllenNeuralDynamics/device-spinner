@@ -51,6 +51,8 @@ class DeviceSpinner:
     def _create_device(self, instance_name: str, device_spec: dict,
                        spec_trees: dict, print_level=0):
         """Instantiate device and dependendent devices recursively."""
+        self.log.debug(f"{4*print_level*' '}"
+                       f"Creating {instance_name}")
         args = copy.deepcopy(device_spec.get(ARGUMENTS, []))
         argvals_to_skip = device_spec.get(SKIP_ARGUMENTS, [])
         kwdvals_to_skip = device_spec.get(SKIP_KEYWORDS, [])
@@ -59,13 +61,9 @@ class DeviceSpinner:
         cls = getattr(module, device_spec["class"])
         # Populate args and kwds with any dependencies from device_list.
         # Build this instance's positional argument dependencies.
-        self.log.debug(f"{4*print_level*' '}"
-                       f"Building {instance_name} args.")
         args = self._create_nested_arg_value(args, argvals_to_skip, spec_trees,
                                              print_level+1)
         # Build this instance's keyword argument dependencies.
-        self.log.debug(f"{4*print_level*' '}"
-                       f"Building {instance_name} kwd values.")
         kwds = self._create_nested_arg_value(kwds, kwdvals_to_skip, spec_trees,
                                              print_level+1)
         # Instantiate class.
@@ -85,8 +83,6 @@ class DeviceSpinner:
         try: #i.e: arg_val is iterable as a dict or list.
             # General case. Iterate through each arg_val and build sub-devices.
             for key, item in gen_enumerate(arg_val):
-                if not isinstance(item, str):
-                    continue
                 arg_val[key] = self._create_nested_arg_value(item,
                                                              argvals_to_skip,
                                                              spec_trees,
@@ -94,13 +90,18 @@ class DeviceSpinner:
             return arg_val
         except TypeError:
             pass
-        # Base case. Build the flat argument value or return the original as-is.
-        if arg_val in self.instance_names and arg_val not in argvals_to_skip:
-            device_spec = spec_trees[arg_val]
-            self.devices[arg_val] = self._create_device(arg_val, device_spec,
-                                                        spec_trees,
-                                                        print_level+1)
-            return self.devices[arg_val]
-        else:
+        if not isinstance(arg_val, str):
             return arg_val
+        if arg_val not in self.instance_names:
+            return arg_val
+        if arg_val in argvals_to_skip:
+            return arg_val
+        # Base case. Build the flat argument value or return the original as-is.
+        self.log.debug(f"{4*print_level*' '}"
+                       f"Building {arg_val}")
+        device_spec = spec_trees[arg_val]
+        self.devices[arg_val] = self._create_device(arg_val, device_spec,
+                                                    spec_trees,
+                                                    print_level+1)
+        return self.devices[arg_val]
 
