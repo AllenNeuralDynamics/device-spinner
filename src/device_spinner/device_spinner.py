@@ -33,7 +33,6 @@ class DeviceSpinner:
 
     def __init__(self):
         self.devices = {}
-        self.print_level = 0
         self.log = logging.getLogger(f"self.__class__.__name__")
         pass
 
@@ -58,7 +57,7 @@ class DeviceSpinner:
         :param spec_trees:
         :param _print_level:
         """
-        self.log.debug(f"{2*print_level*' '}"
+        self.log.debug(f"{2*_print_level*' '}"
                        f"Creating {instance_name}")
         args = copy.deepcopy(device_spec.get(ARGUMENTS, []))
         argvals_to_skip = device_spec.get(SKIP_ARGUMENTS, [])
@@ -69,12 +68,12 @@ class DeviceSpinner:
         # Populate args and kwds with any dependencies from device_list.
         # Build this instance's positional argument dependencies.
         args = self._create_nested_arg_value(args, argvals_to_skip, spec_trees,
-                                             print_level+1)
+                                             _print_level+1)
         # Build this instance's keyword argument dependencies.
         kwds = self._create_nested_arg_value(kwds, kwdvals_to_skip, spec_trees,
-                                             print_level+1)
+                                             _print_level+1)
         # Instantiate class.
-        self.log.debug(f"{2*print_level*' '}"
+        self.log.debug(f"{2*_print_level*' '}"
                        f"{instance_name} = {cls.__name__}(" +
                        f"{', '.join([str(a) for a in args])}"
                        f"{', '.join([str(k)+'='+str(v) for k,v in kwds.items()])})")
@@ -105,7 +104,7 @@ class DeviceSpinner:
                 arg_val[key] = self._create_nested_arg_value(item,
                                                              argvals_to_skip,
                                                              spec_trees,
-                                                             print_level+1)
+                                                             _print_level+1)
             return arg_val
         except TypeError:
             pass
@@ -116,11 +115,11 @@ class DeviceSpinner:
         if arg_val in argvals_to_skip:
             return arg_val
         # Base case. Build the flat argument value or return the original as-is.
-        self.log.debug(f"{2*print_level*' '}"
+        self.log.debug(f"{2*_print_level*' '}"
                        f"Building {arg_val}")
         device_spec = spec_trees[arg_val]
         self.devices[arg_val] = self._create_device(arg_val, device_spec,
                                                     spec_trees,
-                                                    print_level+1)
+                                                    _print_level+1)
         return self.devices[arg_val]
 
