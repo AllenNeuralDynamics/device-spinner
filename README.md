@@ -1,14 +1,12 @@
 # device-spinner
 
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
-<!-- ![Code Style](https://img.shields.io/badge/code%20style-black-black) -->
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 ![Interrogate](https://img.shields.io/badge/interrogate-100.0%25-brightgreen)
-<!--![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen?logo=codecov) -->
 ![Python](https://img.shields.io/badge/python->=3.7-blue?logo=python)
 
-Create complex Python objects from yaml files.
-This library implements the factory design pattern to create objects from a configuration file.
+Create complex Python objects from dicts and yaml files.
+This library implements the factory design pattern to create objects from a specification file.
 
 ## Why do this?
 Building complex objects from a yaml file:
