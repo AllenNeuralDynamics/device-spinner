@@ -18,6 +18,8 @@ SKIP_KEYWORDS = "skip_kwds" # List of kwds with names identical to instance
                             # object instance of the same name.
 MODULE = "module"
 CLASS = "class"
+CONSTRUCTOR = "constructor" # Optional if __init__ is sufficient to
+                            # instantiate the class.
 
 
 def gen_enumerate(iterable: Union[dict, list]):
@@ -65,6 +67,11 @@ class DeviceSpinner:
         kwds = copy.deepcopy(device_spec.get(KEYWORDS, {}))
         module = importlib.import_module(device_spec[MODULE])
         cls = getattr(module, device_spec["class"])
+        constructor = cls
+        # Take classmethod constructor if specified.
+        constructor_name = device_spec.get(CONSTRUCTOR, None)
+        if constructor_name is not None:
+            constructor = getattr(cls, constructor_name)
         # Populate args and kwds with any dependencies from device_list.
         # Build this instance's positional argument dependencies.
         args = self._create_nested_arg_value(args, argvals_to_skip, spec_trees,
@@ -77,7 +84,7 @@ class DeviceSpinner:
                        f"{instance_name} = {cls.__name__}(" +
                        f"{', '.join([str(a) for a in args])}"
                        f"{', '.join([str(k)+'='+str(v) for k,v in kwds.items()])})")
-        return cls(*args, **kwds)
+        return constructor(*args, **kwds)
 
     def _create_nested_arg_value(self, arg_val, argvals_to_skip, spec_trees,
                                  _print_level=0):
