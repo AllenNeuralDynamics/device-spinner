@@ -35,7 +35,7 @@ class DeviceSpinner:
 
     def __init__(self):
         self.devices = {}
-        self.log = logging.getLogger(f"self.__class__.__name__")
+        self.log = logging.getLogger(f"{self.__class__.__name__}")
         pass
 
     def create_devices_from_specs(self, spec_trees: dict):
