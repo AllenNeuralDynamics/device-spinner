@@ -23,22 +23,46 @@ class Rim:
     pass
 
 class Wheel:
-    def __init__(self, hub: Hub, rim: Rim, spokes: list):
+    def __init__(self, hub: Hub, rim: Rim, spokes: list[Spoke]):
+        pass
+
+
+class WheelStarArgs:
+    def __init__(self, hub: Hub, rim: Rim, *spokes: Spoke):
+        pass
+
+
+class WheelStarKwargs:
+    def __init__(self, hub: Hub, rim: Rim, **spokes: Spoke):
         pass
 
 device_specs = \
 {
     "my_bike_wheel":
         {
-            "module": __name__,
+            "module": __name__,  # this file.
             "class": "Wheel",
             "args": ["rim_700mm", "my_hub", ["spoke0", "spoke1", "spoke2", "spoke3"]]
-            #"kwds":
-            #{
-            #    "rim": "rim_700mm",
-            #    "hub": "my_hub",
-            #    "spokes": ["spoke0", "spoke1", "spoke2", "spoke3"]
-            #}
+        },
+    "my_bike_wheel_star_args":
+        {
+            "module": __name__,  # this file.
+            "class": "WheelStarArgs",
+            "args": ["rim_700mm", "my_hub", "spoke0", "spoke1", "spoke2", "spoke3"]
+        },
+
+    "my_bike_wheel_star_kwargs":
+        {
+            "module": __name__,  # this file.
+            "class": "WheelStarKwargs",
+            "args": ["rim_700mm", "my_hub"],
+            "kwds":
+            {
+               "spokeA": "spoke0",
+               "spokeB": "spoke1",
+               "spokeC": "spoke2",
+               "spokeD": "spoke3"
+            }
         },
 
     "rim_700mm":
