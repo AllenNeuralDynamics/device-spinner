@@ -1,9 +1,11 @@
 # device-spinner
-
+<!--
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 ![Interrogate](https://img.shields.io/badge/interrogate-100.0%25-brightgreen)
-![Python](https://img.shields.io/badge/python->=3.7-blue?logo=python)
+-->
+![Python](https://img.shields.io/badge/python->=3.8-blue?logo=python)
+
 
 Create complex Python objects from dicts and yaml files.
 This library implements the factory design pattern to create objects from a specification file.
@@ -11,8 +13,10 @@ This library implements the factory design pattern to create objects from a spec
 ## Why do this?
 Building complex objects from a yaml file:
 * simplifies simulation, where some objects can be mocked or stubbed out with a specific config.
-* enables many distinctly configured objects to be built from the same lines of code.
+* produces a flat view of complex hierarchical objects that take other objects as input (dependency injection).
+* encourages modular, hierarchical design.
 
+ 
 ## Installation
 To use the software, in the root directory, run
 ```bash
@@ -26,37 +30,6 @@ pip install -e .[dev]
 which will install extra dependencies for linting.
 
 ## Contributing
-
-### Linters and testing
-
-There are several libraries used to run linters, check documentation, and run tests.
-
-- Please test your changes using the **coverage** library, which will run the tests and log a coverage report:
-
-```bash
-coverage run -m unittest discover && coverage report
-```
-
-- Use **interrogate** to check that modules, methods, etc. have been documented thoroughly:
-
-```bash
-interrogate .
-```
-
-- Use **flake8** to check that code is up to standards (no unused imports, etc.):
-```bash
-flake8 .
-```
-
-- Use **black** to automatically format the code into PEP standards:
-```bash
-black .
-```
-
-- Use **isort** to automatically sort import statements:
-```bash
-isort .
-```
 
 ### Pull requests
 
