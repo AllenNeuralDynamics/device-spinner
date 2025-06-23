@@ -51,6 +51,10 @@ class DeviceSpinner:
         :param spec_trees:
         :param _print_level:
         """
+        # Bail early: if the instance already exists, return it.
+        if instance_name in self.devices:
+            return self.devices[instance_name]
+        # Otherwise, create the instance and its dependencies.
         self.log.debug(f"{2*_print_level*' '}"
                        f"Creating {instance_name}")
         args = copy.deepcopy(device_spec.get(ARGUMENTS, []))
