@@ -67,10 +67,10 @@ class DeviceSpinner:
         # Populate args and kwds with any dependencies from device_list.
         # Build this instance's positional argument dependencies.
         args = self._create_args(args, argvals_to_skip, spec_trees,
-                                 _print_level+1)
+                                 _print_level)
         # Build this instance's keyword argument dependencies.
         kwds = self._create_kwargs(kwds, kwdvals_to_skip, spec_trees,
-                                   _print_level+1)
+                                   _print_level)
         # Instantiate class.
         self.log.debug(f"{2*_print_level*' '}"
                        f"{instance_name} = {cls.__name__}("
@@ -85,7 +85,7 @@ class DeviceSpinner:
             built_args.append(self._create_nested_arg_value(arg,
                                                             args_to_skip,
                                                             spec_trees,
-                                                            _print_level + 1))
+                                                            _print_level))
         return built_args
 
     def _create_kwargs(self, kwargs, args_to_skip, spec_trees, _print_level=0):
@@ -94,7 +94,7 @@ class DeviceSpinner:
             built_kwargs[kwarg_name] = self._create_nested_arg_value(kwarg_value,
                                                                      args_to_skip,
                                                                      spec_trees,
-                                                                     _print_level + 1)
+                                                                     _print_level)
         return built_kwargs
 
     def _create_nested_arg_value(self, arg_val: Union[str, Any],
