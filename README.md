@@ -29,6 +29,29 @@ pip install -e .[dev]
 ```
 which will install extra dependencies for linting.
 
+## Quickstart
+To create an object from a yaml file, annotate it like this:
+```yaml
+devices:
+    my_list:
+        module: __builtins__
+        class: dict
+        kwds:
+          Peach: 10,
+          Mario: 5,
+          Samus: 12
+```
+Then, in Python
+```python
+from ruamel.yaml import YAML
+
+cfg_file = "/path/to/yaml/cfg.yaml"
+cfg = Yaml().load(cfg_file)
+device_specs = dict(cfg)
+devices = factory.create_devices_from_specs(device_specs["devices"])
+```
+
+
 ## Contributing
 
 ### Pull requests
