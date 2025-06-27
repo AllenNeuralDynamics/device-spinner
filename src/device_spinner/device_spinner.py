@@ -61,8 +61,18 @@ class DeviceSpinner:
         argvals_to_skip = device_spec.get(SKIP_ARGUMENTS, [])
         kwdvals_to_skip = device_spec.get(SKIP_KEYWORDS, [])
         kwds = copy.deepcopy(device_spec.get(KEYWORDS, {}))
-        module = importlib.import_module(device_spec[MODULE])
-        cls = getattr(module, device_spec["class"])
+        if MODULE not in device_spec:
+            try:
+                module_name, class_name = device_spec["class"].rsplit(".", 1)
+                module = importlib.import_module(module_name)
+                cls = getattr(module, class_name)
+            except Exception as e:
+                msg = f"Module name not specified correctly. Cannot extract" \
+                      f"module name from class field: {device_spec['class']}."
+                raise ValueError(msg) from e
+        else:
+            module = importlib.import_module(device_spec[MODULE])
+            cls = getattr(module, device_spec["class"])
         constructor = cls
         # Take classmethod constructor if specified.
         constructor_name = device_spec.get(CONSTRUCTOR, None)

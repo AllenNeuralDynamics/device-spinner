@@ -17,17 +17,14 @@ device_specs = \
 {
     "MyDict":
         {
-            "module": "builtins",
-            "class": "dict",
+            "class": "builtins.dict",
             "kwds": {"key0": "MyVal"},
         },
     "MyVal":
         {
-            "module": "builtins",
-            "class": "str",
+            "class": "builtins.str",
             "args": ["my_val"],
         },
-
 }
 factory = DeviceSpinner()
 device_trees = factory.create_devices_from_specs(device_specs)
