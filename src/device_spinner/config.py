@@ -1,7 +1,8 @@
 """YAML/TOML wrapper that enables edits, reloads, and manages derived params."""
 
 import toml
-from ruamel.yaml import YAML
+#from ruamel.yaml import YAML
+import yaml
 import logging
 from pathlib import Path
 from typing import Union, List
@@ -27,7 +28,8 @@ class Config:
         """
         self.cfg = None  # The actual type will vary but it can be treated
                          # as a dict.
-        self.handlers = {"yaml": YAML(), "toml": toml}
+        #self.handlers = {"yaml": YAML(), "toml": toml}
+        self.handlers = {"yaml": yaml, "toml": toml}
         self.path = Path(filepath) if filepath else None
         self.template = config_template
         self.log = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
