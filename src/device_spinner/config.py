@@ -86,7 +86,7 @@ class Config:
             raise RuntimeError("Config file extension not recognized."
                                "File must have a *.yaml or *.toml suffix.")
         with open(filepath, 'r') as cfg_file:
-            self.cfg = cfg_handler.load(cfg_file)
+            self.cfg = cfg_handler.safe_load(cfg_file)
         self.doc_name = self.path.name
         if not self.template:
             return
