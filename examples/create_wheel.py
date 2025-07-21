@@ -42,8 +42,15 @@ device_specs = \
         {
             "module": __name__,  # this file.
             "class": "Wheel",
-            "args": ["rim_700mm", "my_hub", ["spoke0", "spoke1", "spoke2", "spoke3"]]
+            "args": ["rim_700mm", "my_hub", "spoke_list"]
         },
+
+    "spoke_list":
+        {
+            "factory": "device_spinner.builtins.to_list",
+            "args": ["spoke0", "spoke1", "spoke2", "spoke3"]
+        },
+
     "my_bike_wheel_star_args":
         {
             "module": __name__,  # this file.

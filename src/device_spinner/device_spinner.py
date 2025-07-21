@@ -18,6 +18,7 @@ SKIP_KEYWORDS = "skip_kwds" # List of kwds with names identical to instance
                             # object instance of the same name.
 MODULE = "module"
 CLASS = "class"
+FACTORY = "factory"
 CONSTRUCTOR = "constructor" # Optional if __init__ is sufficient to
                             # instantiate the class.
 
@@ -61,23 +62,7 @@ class DeviceSpinner:
         argvals_to_skip = device_spec.get(SKIP_ARGUMENTS, [])
         kwdvals_to_skip = device_spec.get(SKIP_KEYWORDS, [])
         kwds = copy.deepcopy(device_spec.get(KEYWORDS, {}))
-        if MODULE not in device_spec:
-            try:
-                module_name, class_name = device_spec["class"].rsplit(".", 1)
-                module = importlib.import_module(module_name)
-                cls = getattr(module, class_name)
-            except Exception as e:
-                msg = f"Module name not specified correctly. Cannot extract" \
-                      f"module name from class field: {device_spec['class']}."
-                raise ValueError(msg) from e
-        else:
-            module = importlib.import_module(device_spec[MODULE])
-            cls = getattr(module, device_spec["class"])
-        constructor = cls
-        # Take classmethod constructor if specified.
-        constructor_name = device_spec.get(CONSTRUCTOR, None)
-        if constructor_name is not None:
-            constructor = getattr(cls, constructor_name)
+        factory = self._get_factory(device_spec)
         # Populate args and kwds with any dependencies from device_list.
         # Build this instance's positional argument dependencies.
         args = self._create_args(args, argvals_to_skip, spec_trees,
@@ -87,11 +72,56 @@ class DeviceSpinner:
                                    _print_level)
         # Instantiate class.
         self.log.debug(f"{2*_print_level*' '}"
-                       f"{instance_name} = {cls.__name__}("
+                       f"{instance_name} = {factory.__name__}("
                        f"{', '.join([str(a) for a in args])}"
                        f"{', ' if (len(args) and len(kwds)) else ''}"
                        f"{', '.join([str(k)+'='+str(v) for k,v in kwds.items()])})")
-        return constructor(*args, **kwds)
+        return factory(*args, **kwds)
+
+    def _get_factory(self, device_spec):
+        """return a callable instantiates a class instance.
+        Callable may be: (1) a factory function, (2) the class constructor,
+        (3) a factory method (factory function that belongs to the class)
+        """
+        # We're trying to do one of these 3 things:
+        #   from module import factory function.
+        #   from module import class.
+        #   from module import class; from class get factory method.
+        # Conscise case: MODULE and CLASS or FACTORY are smushed together.
+        if MODULE not in device_spec:
+            # Identify the suffix: class or factory function
+            if CLASS in device_spec:
+                suffix = CLASS
+            elif FACTORY in device_spec:
+                suffix = FACTORY
+            else:
+                msg = f"Cannot extract module name from class or factory path. " \
+                      f"Either {MODULE} or {CLASS} must be defined prefixed " \
+                      f"by the module path."
+                raise ValueError(msg)
+            try:  # module and class defined together as "class".
+                module_name, factory_name = device_spec[suffix].rsplit(".", 1)
+                module = importlib.import_module(module_name)
+                factory = getattr(module, factory_name)
+            except (ImportError, AttributeError) as e:
+                msg = f"Module name not specified correctly. Cannot extract " \
+                      f"module name from class or factory path: " \
+                      f"{device_spec[suffix]}."
+                e.args = (f"{msg} " + str(e))
+                raise
+        else: # Verbose case: MODULE and CLASS or FACTORY are separated.
+            # Identify what to import: class or factory function
+            if CLASS in device_spec:
+                callable_name = CLASS
+            elif FACTORY in device_spec:
+                callable_name = FACTORY
+            module = importlib.import_module(device_spec[MODULE])
+            factory = getattr(module, device_spec[callable_name])
+        # Override: Take classmethod constructor over class.__init__.
+        if CONSTRUCTOR in device_spec and CLASS in device_spec:
+            constructor_name = device_spec[CONSTRUCTOR]
+            factory = getattr(factory, constructor_name)
+        return factory
 
     def _create_args(self, args, args_to_skip, spec_trees, _print_level=0):
         built_args = []
