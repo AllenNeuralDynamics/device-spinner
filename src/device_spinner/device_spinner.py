@@ -126,24 +126,27 @@ class DeviceSpinner:
     def _create_args(self, args, args_to_skip, spec_trees, _print_level=0):
         built_args = []
         for arg in args:
+            if arg in args_to_skip:
+                built_args.append(arg)
+                continue
             built_args.append(self._create_nested_arg_value(arg,
-                                                            args_to_skip,
                                                             spec_trees,
                                                             _print_level))
         return built_args
 
-    def _create_kwargs(self, kwargs, args_to_skip, spec_trees, _print_level=0):
+    def _create_kwargs(self, kwargs, kwds_to_skip, spec_trees, _print_level=0):
         built_kwargs = {}
         for kwarg_name, kwarg_value in kwargs.items():
+            if kwarg_name in kwds_to_skip:
+                built_kwargs[kwarg_name] = kwarg_value
+                continue
             built_kwargs[kwarg_name] = self._create_nested_arg_value(kwarg_value,
-                                                                     args_to_skip,
                                                                      spec_trees,
                                                                      _print_level)
         return built_kwargs
 
     def _create_nested_arg_value(self, arg_val: Union[str, Any],
-                                 argvals_to_skip: list, spec_trees: dict,
-                                 _print_level: int = 0):
+                                 spec_trees: dict, _print_level: int = 0):
         """Take a nested list or dictionary and return it with
             named instances replaced with their instances. Populate
             :attr:`~.DeviceSpinner.devices` with any built instances along the
@@ -153,8 +156,6 @@ class DeviceSpinner:
             populate as an arg when instantiating an object.
             Strings with object instances of the same name in the device tree
             will be replaced with the instantiated object.
-        :param argvals_to_skip: strings in `argval` with names in this list
-            will not be populated with object instances of the same name.
         :param spec_trees: dictionary of one or more trees containing object
             instance names, dependencies, and parameters specifying how to
             instantiate them.
@@ -164,8 +165,6 @@ class DeviceSpinner:
         if not isinstance(arg_val, str):  # Only replace string matching instance name
             return arg_val
         if arg_val not in self.instance_names:
-            return arg_val
-        if arg_val in argvals_to_skip:
             return arg_val
         # Base case. Build the flat argument value or return the original as-is.
         device_spec = spec_trees[arg_val]
