@@ -65,11 +65,11 @@ class DeviceSpinner:
         factory = self._get_factory(device_spec)
         # Populate args and kwds with any dependencies from device_list.
         # Build this instance's positional argument dependencies.
-        args = self._create_args(args, argvals_to_skip, spec_trees,
-                                 _print_level)
+        args = self._create_args(instance_name, args, argvals_to_skip,
+                                 spec_trees, _print_level)
         # Build this instance's keyword argument dependencies.
-        kwds = self._create_kwargs(kwds, kwdvals_to_skip, spec_trees,
-                                   _print_level)
+        kwds = self._create_kwargs(instance_name, kwds, kwdvals_to_skip,
+                                   spec_trees, _print_level)
         # Instantiate class.
         self.log.debug(f"{2*_print_level*' '}"
                        f"{instance_name} = {factory.__name__}("
@@ -123,10 +123,14 @@ class DeviceSpinner:
             factory = getattr(factory, constructor_name)
         return factory
 
-    def _create_args(self, args, args_to_skip, spec_trees, _print_level=0):
+    def _create_args(self, instance_name: str, args: list, args_to_skip: list,
+                     spec_trees: dict, _print_level=0):
         built_args = []
         for arg in args:
-            if arg in args_to_skip:
+            # Edge case: Check against instance name to prevent `_create_device`
+            # from recursively stuffing an instance of itself into its own
+            # __init__ because a field happens to match its own instance name.
+            if arg in args_to_skip or arg == instance_name:
                 built_args.append(arg)
                 continue
             built_args.append(self._create_nested_arg_value(arg,
@@ -134,10 +138,14 @@ class DeviceSpinner:
                                                             _print_level))
         return built_args
 
-    def _create_kwargs(self, kwargs, kwds_to_skip, spec_trees, _print_level=0):
+    def _create_kwargs(self, instance_name: str, kwargs: dict,
+                       kwds_to_skip: list, spec_trees: dict, _print_level=0):
         built_kwargs = {}
         for kwarg_name, kwarg_value in kwargs.items():
-            if kwarg_name in kwds_to_skip:
+            # Edge case: Check against instance name to prevent `_create_device`
+            # from recursively stuffing an instance of itself into its own
+            # __init__ because a field happens to match its own instance name.
+            if kwarg_name in kwds_to_skip or kwarg_value == instance_name:
                 built_kwargs[kwarg_name] = kwarg_value
                 continue
             built_kwargs[kwarg_name] = self._create_nested_arg_value(kwarg_value,
