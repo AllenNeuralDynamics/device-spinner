@@ -17,7 +17,7 @@ def test_prevent_self_recursion():
 
         "my_list":
         {
-            "factory": "device_spinner.builtins.to_list",
+            "factory": "device_spinner.factory_utils.to_list",
             "args": ["my_list"]
         }
     }

@@ -47,7 +47,7 @@ device_specs = \
 
     "spoke_list":
         {
-            "factory": "device_spinner.builtins.to_list",
+            "factory": "device_spinner.factory_utils.to_list",
             "args": ["spoke0", "spoke1", "spoke2", "spoke3"]
         },
 

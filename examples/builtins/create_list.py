@@ -12,7 +12,7 @@ device_specs = \
 {
     "my_list":
         {
-            "factory": "device_spinner.builtins.to_list",
+            "factory": "device_spinner.factory_utils.to_list",
             "args":
             [
                 0,
