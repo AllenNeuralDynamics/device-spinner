@@ -34,7 +34,7 @@ To create an object from a yaml file, annotate it like this:
 ```yaml
 devices:
     my_list:
-        module: __builtins__
+        module: builtins
         class: dict
         kwds:
           Peach: 10,
@@ -75,7 +75,7 @@ class JumpingRobot
         self.leg = leg
 ```
 
-In the yaml file, under `my_robot` `kwds`, we pass in the instance **names**
+In the yaml file, under `my_robot` `kwds`, we pass in the instance names
 as they are named in the parent dict (`devices`).
 When `DeviceSpinner` sees these names that match other object intances in the
 parent dictionay, it will first build these dependencies, and then pass them in
@@ -105,7 +105,7 @@ Sometimes you don't want the above behavior, and you want to treat strings as st
 To do so, mark them with the `skip_args` or `skip_kwds` field.
 
 ### Syntactic Sugar
-By default, `DeviceSpinner` knows not to insert an instance of an object itself during `__init__`.
+By default, `DeviceSpinner` knows not to insert an instance of itself into itself during `__init__`.
 So if you have have a yaml like this:
 ```yaml
 devices:
@@ -127,9 +127,9 @@ devices
     my_legs:
         module: builtins
         class: list
-        args:   # This wont replace strings with object instances of the same name
-        -   - left_leg
-            - right_leg
+        args:
+        -   - left_leg  # <-- treated as a string!
+            - right_leg # <-- treated as a string!
     left_leg:
         module: robot_lib.robot_parts
         class: Leg
@@ -149,9 +149,9 @@ devices
     my_legs:
         module: device_spinner.factory_utils
         factory: to_list  # returns a list insance
-        args:   # This *will* replace strings with object instances of the same name
-        - left_leg
-        - right_leg
+        args:
+        - left_leg  # <-- will be replaced by the object instance of the same name
+        - right_leg # <-- will be replaced by the object instance of the same name
     left_leg:
         module: robot_lib.robot_parts
         class: Leg
