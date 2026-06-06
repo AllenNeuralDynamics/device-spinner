@@ -1,4 +1,4 @@
-"""Nested Saveable Dict vibe-coded with Gemini"""
+"""A nested saveable dict vibe-coded with Gemini"""
 from collections import UserDict
 from pathlib import Path
 import secrets
@@ -14,6 +14,19 @@ SupportedFormat = Literal['json', 'yaml']
 class FileBackedDict(UserDict[str, Any]):
     """Dict with a `save()` method that propagates to subdicts originating from
     the same file source.
+
+    Key Features
+    ------------
+
+    - `FileBackedDicts` are dict-like objects that are created from file (yaml or json)
+    - Once loaded from a file, `FileBackedDicts` can be manipulated like dicts.
+    - `FileBackedDicts` can contain `FileBackedDicts` ("subdicts"). These subdicts
+      have their own `save()` method.
+        - Calling `save()` from a subdict only saves the keys/values in the scope
+          of the subdict to the original file.
+        - Calling `save()` from a parent dict also saves any keys/values altered
+          by the child. (This is consistent with how normal dicts work.)
+        - `FileBackedDicts` can be converted to plain dictionaries with `to_dict()`.
     """
     def __init__(self, filepath: Union[str, Path], *args: Any,
                  _root_saver: Optional[SaverCallback] = None,
@@ -72,11 +85,13 @@ class FileBackedDict(UserDict[str, Any]):
         saver: SaverCallback = self._root_saver if self._root_saver else self._save_partial
         if isinstance(value, dict) and not isinstance(value, FileBackedDict):
             child_path: KeyPath = self._key_path + [key]
-            value = FileBackedDict(self.filepath, value, _root_saver=saver, _key_path=child_path)
+            value = FileBackedDict(self.filepath, value, _root_saver=saver,
+                                   _key_path=child_path)
         super().__setitem__(key, value)
 
     def to_dict(self) -> Dict[str, Any]:
-        """Recursively converts FileBackedDict instances back to primitive dictionaries."""
+        """Recursively converts FileBackedDict instances back to primitive
+        dictionaries."""
         result: Dict[str, Any] = {}
         for key, value in self.data.items():
             if isinstance(value, FileBackedDict):
@@ -85,7 +100,8 @@ class FileBackedDict(UserDict[str, Any]):
                 result[key] = value
         return result
 
-    def _save_partial(self, target_path: Optional[KeyPath] = None, partial_data: Optional[Dict[str, Any]] = None) -> None:
+    def _save_partial(self, target_path: Optional[KeyPath] = None,
+                      partial_data: Optional[Dict[str, Any]] = None) -> None:
         """
         Loads the file from disk, updates only the targeted subset fields,
         and saves it back using an atomic write strategy.
@@ -109,7 +125,8 @@ class FileBackedDict(UserDict[str, Any]):
         if fmt == 'json':
             output: str = json.dumps(full_data, indent=4)
         elif fmt == 'yaml':
-            output = yaml.safe_dump(full_data, default_flow_style=False, sort_keys=False)
+            output = yaml.safe_dump(full_data, default_flow_style=False,
+                                    sort_keys=False)
 
         # Ensure target directory exists
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
@@ -133,7 +150,10 @@ class FileBackedDict(UserDict[str, Any]):
             raise
 
     def save(self) -> None:
-        """Triggers a partial save targeting only this instance's keys."""
+        """Saves all keys/values back to the original file. If this instance
+        is a child, save only the keys/values in this child and leave parent
+        values unaltered."""
+        # Triggers a partial save targeting only this instance's keys.
         if self._root_saver:
             self._root_saver(self._key_path, self.to_dict())
         else:
