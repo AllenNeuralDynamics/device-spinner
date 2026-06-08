@@ -25,12 +25,19 @@ CONSTRUCTOR = "constructor" # Optional if __init__ is sufficient to
 class DeviceSpinner:
 
     def __init__(self):
-        self.devices = {}
-        self.instance_names = set()
+        self.devices: dict[str, object] = {}
+        self.instance_names: set = set()
         self.log = logging.getLogger(f"{self.__class__.__name__}")
-        pass
 
-    def create_devices_from_specs(self, spec_trees: dict):
+    def create_devices_from_specs(self, spec_trees: dict,
+                                  overrides: dict[str, object] | None = None):
+        """Create object instances from specifications. If `overrides` are
+        specified, apply them first.
+        """
+        # Populate devices with any externally created instances first to
+        # satisfy dependencies.
+        if overrides:
+            self.devices.update(overrides)
         # Construct all devices in device_list.
         self.instance_names = set(spec_trees.keys())
         for instance_name, init_specifications in spec_trees.items():
@@ -46,10 +53,17 @@ class DeviceSpinner:
         """Instantiate device and dependendent devices and populate them in
         self.devices keyed by instance_name. Recursive.
 
-        :param instance_name:
-        :param device_spec:
-        :param spec_trees:
-        :param _print_level:
+        Parameters
+        ----------
+        instance_name:
+            name of the device instance as it will be keyed in the final dict.
+        device_spec:
+            spec related to instantiating the device.
+        spec_trees:
+            full spec of all devices.
+        _print_level:
+            indentation level. Deeper indentation relates to a depth-first
+            search to build the parent device's dependencies.
         """
         # Bail early: if the instance already exists, return it.
         if instance_name in self.devices:
@@ -179,4 +193,3 @@ class DeviceSpinner:
                                                     spec_trees,
                                                     _print_level+1)
         return self.devices[arg_val]
-
