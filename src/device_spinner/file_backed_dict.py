@@ -1,160 +1,145 @@
-"""A nested saveable dict vibe-coded with Gemini"""
-from collections import UserDict
+"""File-backed persistence utilities for HierarchicalDict."""
+
 from pathlib import Path
 import secrets
-from typing import Any, Callable, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, Literal, Union
 import json
 import yaml
 
-# Define types for paths and saving callbacks
-KeyPath = List[str]
-SaverCallback = Callable[[Optional[KeyPath], Optional[Dict[str, Any]]], None]
-SupportedFormat = Literal['json', 'yaml']
+from .hierarchical_dict import (
+    HierarchicalDict,
+    KeyPath,
+)
 
-class FileBackedDict(UserDict[str, Any]):
-    """Dict with a `save()` method that propagates to subdicts originating from
-    the same file source.
 
-    Key Features
-    ------------
+## File I/O utilities
 
-    - `FileBackedDicts` are dict-like objects that are created from file (yaml or json)
-    - Once loaded from a file, `FileBackedDicts` can be manipulated like dicts.
-    - `FileBackedDicts` can contain `FileBackedDicts` ("subdicts"). These subdicts
-      have their own `save()` method.
-        - Calling `save()` from a subdict only saves the keys/values in the scope
-          of the subdict to the original file.
-        - Calling `save()` from a parent dict also saves any keys/values altered
-          by the child. (This is consistent with how normal dicts work.)
-        - `FileBackedDicts` can be converted to plain dictionaries with `to_dict()`.
-    """
-    def __init__(self, filepath: Union[str, Path], *args: Any,
-                 _root_saver: Optional[SaverCallback] = None,
-                 _key_path: Optional[KeyPath] = None, **kwargs: Any) -> None:
-        self.filepath: Path = Path(filepath)
-        self._root_saver: Optional[SaverCallback] = _root_saver
-        self._key_path: KeyPath = _key_path or []
 
-        initial_data: Dict[str, Any] = {}
-        if _root_saver is not None:
-            initial_data = {}
-        elif self.filepath.exists():
-            initial_data = self._load_from_file()
-        else:
-            initial_data = {}
+def _set_nested(data: Dict[str, Any], path: KeyPath, value: Any) -> None:
+    """Modify data by assigning value into the nested path, creating intermediate dicts as needed."""
+    for key in path[:-1]:
+        if not isinstance(data.get(key), dict):
+            data[key] = {}
+        data = data[key]
+    data[path[-1]] = value
 
-        initial_data.update(dict(*args, **kwargs))
-        super().__init__(initial_data)
-        self._convert_nested()
 
-    def _get_format(self) -> SupportedFormat:
-        """Detects format based on file extension using pathlib."""
-        ext: str = self.filepath.suffix.lower()
-        if ext == '.json':
-            return 'json'
-        elif ext in ('.yaml', '.yml'):
-            return 'yaml'
-        raise ValueError(f"Unsupported file extension: '{ext}'. Use .json, .yaml, or .yml")
+SupportedFormat = Literal["json", "yaml"]
 
-    def _load_from_file(self) -> Dict[str, Any]:
-        """Reads and parses data based on the file type."""
-        fmt: SupportedFormat = self._get_format()
-        try:
-            content: str = self.filepath.read_text(encoding='utf-8')
-            if fmt == 'json':
-                data = json.loads(content)
-                return data if isinstance(data, dict) else {}
-            elif fmt == 'yaml':
-                data = yaml.safe_load(content)
-                return data if isinstance(data, dict) else {}
-        except (json.JSONDecodeError, yaml.YAMLError, OSError):
-            return {}
+
+def _get_format(filepath: Path) -> SupportedFormat:
+    """Detect serialisation format from file extension."""
+    ext: str = filepath.suffix.lower()
+    if ext == ".json":
+        return "json"
+    if ext in (".yaml", ".yml"):
+        return "yaml"
+    raise ValueError(f"Unsupported file extension: '{ext}'. Use .json, .yaml, or .yml")
+
+
+def _load_dict_from_file(filepath: Path) -> Dict[str, Any]:
+    """Load top-level mapping from a json/yaml file."""
+    fmt: SupportedFormat = _get_format(filepath)
+    try:
+        content: str = filepath.read_text(encoding="utf-8")
+        if fmt == "json":
+            data = json.loads(content)
+            return data if isinstance(data, dict) else {}
+        data = yaml.safe_load(content)
+        return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, yaml.YAMLError, OSError):
         return {}
 
-    def _convert_nested(self) -> None:
-        """Wraps plain dictionaries inside this dict as child instances."""
-        saver: SaverCallback = self._root_saver if self._root_saver else self._save_partial
-        for key, value in list(self.data.items()):
-            if isinstance(value, dict) and not isinstance(value, FileBackedDict):
-                child_path: KeyPath = self._key_path + [key]
-                self.data[key] = FileBackedDict(
-                    self.filepath, value, _root_saver=saver, _key_path=child_path
-                )
 
-    def __setitem__(self, key: str, value: Any) -> None:
-        saver: SaverCallback = self._root_saver if self._root_saver else self._save_partial
-        if isinstance(value, dict) and not isinstance(value, FileBackedDict):
-            child_path: KeyPath = self._key_path + [key]
-            value = FileBackedDict(self.filepath, value, _root_saver=saver,
-                                   _key_path=child_path)
-        super().__setitem__(key, value)
+def _dump_dict_to_file(filepath: Path, full_data: Dict[str, Any]) -> None:
+    """Atomically write a mapping to a json/yaml file."""
+    fmt: SupportedFormat = _get_format(filepath)
+    if fmt == "json":
+        output: str = json.dumps(full_data, indent=4)
+    else:
+        output = yaml.safe_dump(full_data, default_flow_style=False, sort_keys=False)
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Recursively converts FileBackedDict instances back to primitive
-        dictionaries."""
-        result: Dict[str, Any] = {}
-        for key, value in self.data.items():
-            if isinstance(value, FileBackedDict):
-                result[key] = value.to_dict()
-            else:
-                result[key] = value
-        return result
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    temp_file = filepath.with_suffix(filepath.suffix + f".tmp_{secrets.token_hex(4)}")
+    try:
+        temp_file.write_text(output, encoding="utf-8")
+        temp_file.replace(filepath)
+    except Exception:
+        if temp_file.exists():
+            temp_file.unlink()
+        raise
 
-    def _save_partial(self, target_path: Optional[KeyPath] = None,
-                      partial_data: Optional[Dict[str, Any]] = None) -> None:
+
+class FileBackedDict(HierarchicalDict):
+    """HierarchicalDict bound to a json/yaml file.
+
+    All dict behaviour is inherited from ``HierarchicalDict``. Only
+    file-loading, child-creation, and persistence are overridden.
+
+    Use ``FileBackedDict.init_root(filepath)`` to create an instance.
+    Call ``.save()`` to write changes back and ``.load()`` to pull in
+    changes from disk.
+    """
+
+    @classmethod
+    def init_root(
+        cls, filepath: Union[str, Path], *args: Any, **kwargs: Any
+    ) -> "FileBackedDict":
+        """Create a root FileBackedDict backed by a file.
+
+        Loads existing file contents, then applies any extra keyword or
+        positional arguments as an overlay (same semantics as ``dict.update``).
         """
-        Loads the file from disk, updates only the targeted subset fields,
-        and saves it back using an atomic write strategy.
+        instance = cls()
+        instance._filepath = Path(filepath)
+        instance.load()
+        if args or kwargs:
+            instance.update(dict(*args, **kwargs))
+        return instance
+
+    @property
+    def filepath(self) -> Path:
+        """Path to the backing file. Owned by the root; children delegate upward."""
+        if self.is_root:
+            return self._filepath
+        return self._parent.filepath  # type: ignore[union-attr]
+
+    def _make_child(self, key: str, value: Dict[str, Any]) -> "FileBackedDict":
+        """Override to keep children as FileBackedDict so they share filepath."""
+        return FileBackedDict(value, _parent=self, _key_in_parent=key)
+
+    def load(self, *, replace: bool = True) -> None:
+        """Load/reload this node's scope from file.
+
+        Root node operates on the full tree; a child node operates only on its
+        own scope, leaving sibling keys in memory untouched.
+
+        Args:
+            replace: If True (default), clear in-memory keys before applying
+                file data so the result exactly mirrors the file. If False,
+                merge file data on top of memory, leaving keys absent from the
+                file untouched.
         """
-        full_data: Dict[str, Any] = self._load_from_file() if self.filepath.exists() else {}
-
-        if target_path and partial_data is not None:
-            current: Any = full_data
-            for step in target_path[:-1]:
-                if step not in current or not isinstance(current[step], dict):
-                    current[step] = {}
-                current = current[step]
-
-            if target_path:
-                current[target_path[-1]] = partial_data
-        else:
-            full_data = self.to_dict()
-
-        fmt: SupportedFormat = self._get_format()
-
-        if fmt == 'json':
-            output: str = json.dumps(full_data, indent=4)
-        elif fmt == 'yaml':
-            output = yaml.safe_dump(full_data, default_flow_style=False,
-                                    sort_keys=False)
-
-        # Ensure target directory exists
-        self.filepath.parent.mkdir(parents=True, exist_ok=True)
-
-        # --- ATOMIC WRITE ---
-        # Generate a unique temp file name in the target directory to guarantee
-        # they're on the same filesystem
-        temp_suffix = f".tmp_{secrets.token_hex(4)}"
-        temp_file = self.filepath.with_suffix(self.filepath.suffix + temp_suffix)
-
-        try:
-            # 1. Write data to the temporary file completely
-            temp_file.write_text(output, encoding='utf-8')
-
-            # 2. Atomically swap/replace the temp file over the target destination file
-            temp_file.replace(self.filepath)
-        except Exception:
-            # Clean up the temp file if the write process itself failed
-            if temp_file.exists():
-                temp_file.unlink()
-            raise
+        file_data: Dict[str, Any] = (
+            _load_dict_from_file(self.filepath) if self.filepath.exists() else {}
+        )
+        if not self.is_root:
+            for key in self._path_from_root():
+                file_data = file_data.get(key, {})
+        if replace:
+            self.data.clear()
+        self.update(file_data)
 
     def save(self) -> None:
-        """Saves all keys/values back to the original file. If this instance
-        is a child, save only the keys/values in this child and leave parent
-        values unaltered."""
-        # Triggers a partial save targeting only this instance's keys.
-        if self._root_saver:
-            self._root_saver(self._key_path, self.to_dict())
+        """Save this node's scope back to file.
+
+        Root node writes the full tree; a child node merges only its scope
+        into the existing file, leaving sibling keys untouched.
+        """
+        path = self.filepath
+        full_data = _load_dict_from_file(path) if path.exists() else {}
+        if self.is_root:
+            full_data = self.to_dict()
         else:
-            self._save_partial()
+            _set_nested(full_data, self._path_from_root(), self.to_dict())
+        _dump_dict_to_file(path, full_data)
