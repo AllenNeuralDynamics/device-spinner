@@ -1,5 +1,4 @@
-from device_spinner.hierarchical_dict import HierarchicalDict
-from device_spinner.file_backed_dict import FileBackedDict, load, save
+from device_spinner.file_backed_dict import FileBackedDict
 
 
 def get_example_file_backed_dict(tmp_path) -> FileBackedDict:
@@ -129,27 +128,26 @@ def test_parent_pointers_compute_child_path_and_save_scope(tmp_path):
 
 def test_module_load_save_round_trip_root(tmp_path):
     path = tmp_path / "config.yaml"
-    cfg = HierarchicalDict({"database": {"host": "localhost", "port": 5432}})
-    save(cfg, path)
+    cfg = FileBackedDict.init_root(path)
+    cfg["database"] = {"host": "localhost", "port": 5432}
+    cfg.save()
 
-    loaded = load(path)
-    assert isinstance(loaded, HierarchicalDict)
-    assert loaded.to_dict() == {"database": {"host": "localhost", "port": 5432}}
+    reloaded = FileBackedDict.init_root(path)
+    assert reloaded.to_dict() == {"database": {"host": "localhost", "port": 5432}}
 
 
 def test_module_save_child_scope_only(tmp_path):
     path = tmp_path / "config.yaml"
-    root = HierarchicalDict(
-        {"users": {"Fred": {"fave_recipe": {"name": "fried strings"}}}}
-    )
-    save(root, path)
+    root = FileBackedDict.init_root(path)
+    root["users"] = {"Fred": {"fave_recipe": {"name": "fried strings"}}}
+    root.save()
 
     child = root["users"]["Fred"]["fave_recipe"]
     child["name"] = "tomato soup"
     root["users"]["Frankie"] = {"fave_recipe": {"name": "onion soup"}}
 
-    save(child, path)
+    child.save()
 
-    reloaded = load(path)
+    reloaded = FileBackedDict.init_root(path)
     assert reloaded["users"]["Fred"]["fave_recipe"]["name"] == "tomato soup"
     assert "Frankie" not in reloaded["users"]
