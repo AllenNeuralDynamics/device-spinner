@@ -2,7 +2,7 @@
 
 from pathlib import Path
 import secrets
-from typing import Any, Dict, Literal, Union
+from typing import Any, Dict, Literal, Optional, Union, overload
 import json
 import yaml
 
@@ -76,26 +76,63 @@ class FileBackedDict(HierarchicalDict):
     All dict behaviour is inherited from ``HierarchicalDict``. Only
     file-loading, child-creation, and persistence are overridden.
 
-    Use ``FileBackedDict.init_root(filepath)`` to create an instance.
+    Use ``FileBackedDict(filepath)`` to create an instance.
     Call ``.save()`` to write changes back and ``.load()`` to pull in
     changes from disk.
     """
 
-    @classmethod
-    def init_root(
-        cls, filepath: Union[str, Path], *args: Any, **kwargs: Any
-    ) -> "FileBackedDict":
-        """Create a root FileBackedDict backed by a file.
+    @overload
+    def __init__(
+        self,
+        *args: Any,
+        filepath: Union[str, Path],
+        **kwargs: Any,
+    ) -> None:
+        """Create a root node backed by *filepath*, loading its contents immediately.
 
-        Loads existing file contents, then applies any extra keyword or
-        positional arguments as an overlay (same semantics as ``dict.update``).
+        If the file does not exist it is created on the first call to :meth:`save`.
+        Any positional or keyword arguments are applied as an overlay on top of the
+        loaded data after the file is read.
         """
-        instance = cls()
-        instance._filepath = Path(filepath)
-        instance.load()
-        if args or kwargs:
-            instance.update(dict(*args, **kwargs))
-        return instance
+        ...
+
+    @overload
+    def __init__(
+        self,
+        *args: Any,
+        _parent: "FileBackedDict",
+        _key_in_parent: str,
+        **kwargs: Any,
+    ) -> None:
+        """Internal — do not call directly.
+
+        Child nodes are created automatically when a plain :class:`dict` is assigned
+        to a key.  They share the filepath of their root ancestor.
+        """
+        ...
+
+    def __init__(
+        self,
+        *args: Any,
+        filepath: Union[str, Path, None] = None,
+        _parent: Optional["FileBackedDict"] = None,
+        _key_in_parent: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        """See the :func:`~overload` signatures above for the two supported calling
+        conventions: creating a root node bound to a file, or internal child-node
+        construction (done automatically — not intended for direct use).
+        """
+        super().__init__(
+            dict(*args, **kwargs),
+            _parent=_parent,
+            _key_in_parent=_key_in_parent,
+        )
+        if _parent is None:
+            if filepath is None:
+                raise ValueError("filepath is required for a root FileBackedDict")
+            self._filepath: Path = Path(filepath)
+            self.load()
 
     @property
     def filepath(self) -> Path:

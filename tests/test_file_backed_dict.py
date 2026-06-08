@@ -4,7 +4,7 @@ from device_spinner.file_backed_dict import FileBackedDict
 def get_example_file_backed_dict(tmp_path) -> FileBackedDict:
     """Make a FileBackedDict instance from an empty config.yaml file"""
     path = tmp_path / "config.yaml"  # Empty yaml.
-    config = FileBackedDict.init_root(path)
+    config = FileBackedDict(filepath=path)
     config["users"] = {
         "Fred": {
             "age": 42,
@@ -20,7 +20,7 @@ def get_example_file_backed_dict(tmp_path) -> FileBackedDict:
 
 def test_to_dict_comparison(tmp_path):
     path = tmp_path / "config.yaml"  # Empty yaml.
-    config = FileBackedDict.init_root(path)
+    config = FileBackedDict(filepath=path)
     config["database"] = {"host": "localhost", "port": 5432}
     config["logging"] = {"level": "INFO"}
 
@@ -53,11 +53,11 @@ def test_child_altering_attributes_changes_same_attributes_in_parent(tmp_path):
 
 def test_saving(tmp_path):
     path = tmp_path / "config.yaml"  # Empty yaml.
-    config = FileBackedDict.init_root(path)
+    config = FileBackedDict(filepath=path)
     config["pockets"] = ["keys", "spare change", "the one ring"]
     config.save()
     # Import changes from file into a separate instance.
-    config2 = FileBackedDict.init_root(path)
+    config2 = FileBackedDict(filepath=path)
     assert config2.to_dict() == config.to_dict()
 
 
@@ -79,7 +79,7 @@ def test_saving_child_only_saves_child_scope_changes(tmp_path):
     freds_fave_recipe.save()  # should not save out-of-scope changes.
     # Import changes from file into a separate instance.
     path = tmp_path / "config.yaml"  # recently-saved yaml
-    config2 = FileBackedDict.init_root(path)
+    config2 = FileBackedDict(filepath=path)
     assert "Frankie" not in config2.to_dict()["users"]
 
 
@@ -104,14 +104,14 @@ def test_saving_parent_also_saves_child_scope_changes(tmp_path):
     config.save()  # should save everything.
     # Import changes from file into a separate instance.
     path = tmp_path / "config.yaml"  # recently-saved yaml
-    config2 = FileBackedDict.init_root(path)
+    config2 = FileBackedDict(filepath=path)
     # Child changes should exist.
     assert config2["users"]["Fred"]["fave_recipe"]["name"] == "string beans"
 
 
 def test_parent_pointers_compute_child_path_and_save_scope(tmp_path):
     path = tmp_path / "config.yaml"
-    config = FileBackedDict.init_root(path)
+    config = FileBackedDict(filepath=path)
     config["root"] = {"child": {"leaf": {"value": 1}}}
 
     leaf = config["root"]["child"]["leaf"]
@@ -121,24 +121,24 @@ def test_parent_pointers_compute_child_path_and_save_scope(tmp_path):
     config["unsaved_sibling"] = {"x": 1}
     leaf.save()
 
-    reloaded = FileBackedDict.init_root(path)
+    reloaded = FileBackedDict(filepath=path)
     assert reloaded["root"]["child"]["leaf"]["value"] == 2
     assert "unsaved_sibling" not in reloaded
 
 
 def test_module_load_save_round_trip_root(tmp_path):
     path = tmp_path / "config.yaml"
-    cfg = FileBackedDict.init_root(path)
+    cfg = FileBackedDict(filepath=path)
     cfg["database"] = {"host": "localhost", "port": 5432}
     cfg.save()
 
-    reloaded = FileBackedDict.init_root(path)
+    reloaded = FileBackedDict(filepath=path)
     assert reloaded.to_dict() == {"database": {"host": "localhost", "port": 5432}}
 
 
 def test_module_save_child_scope_only(tmp_path):
     path = tmp_path / "config.yaml"
-    root = FileBackedDict.init_root(path)
+    root = FileBackedDict(filepath=path)
     root["users"] = {"Fred": {"fave_recipe": {"name": "fried strings"}}}
     root.save()
 
@@ -148,6 +148,44 @@ def test_module_save_child_scope_only(tmp_path):
 
     child.save()
 
-    reloaded = FileBackedDict.init_root(path)
+    reloaded = FileBackedDict(filepath=path)
     assert reloaded["users"]["Fred"]["fave_recipe"]["name"] == "tomato soup"
     assert "Frankie" not in reloaded["users"]
+
+
+def test_load_replaces_in_memory_values(tmp_path):
+    path = tmp_path / "config.yaml"
+    config = FileBackedDict(filepath=path)
+    config["x"] = 1
+    config.save()
+
+    # Mutate in memory without saving, then reload.
+    config["x"] = 99
+    config["y"] = "stale"
+    config.load()
+
+    assert config["x"] == 1
+    assert "y" not in config
+
+
+def test_load_replace_false_merges_file_on_top(tmp_path):
+    path = tmp_path / "config.yaml"
+    config = FileBackedDict(filepath=path)
+    config["x"] = 1
+    config.save()
+
+    config["x"] = 99  # unsaved change
+    config["y"] = "local-only"
+    config.load(replace=False)
+
+    assert config["x"] == 1  # file value wins
+    assert config["y"] == "local-only"  # local-only key survives
+
+
+def test_is_root(tmp_path):
+    path = tmp_path / "config.yaml"
+    config = FileBackedDict(filepath=path)
+    config["nested"] = {"key": "value"}
+
+    assert config.is_root is True
+    assert config["nested"].is_root is False
