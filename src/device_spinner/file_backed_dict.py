@@ -2,7 +2,6 @@
 from collections import UserDict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Literal, Optional, Union
-import logging
 import json
 import yaml
 import secrets
@@ -87,7 +86,8 @@ class FileBackedDict(UserDict[str, Any]):
         saver: SaverCallback = self._root_saver if self._root_saver else self._save_partial
         if isinstance(value, dict) and not isinstance(value, FileBackedDict):
             child_path: KeyPath = self._key_path + [key]
-            value = FileBackedDict(self.filepath, value, _root_saver=saver, _key_path=child_path)
+            value = FileBackedDict(self.filepath, value, _root_saver=saver,
+                                   _key_path=child_path)
         super().__setitem__(key, value)
 
     def __or__(self, other: Any) -> "FileBackedDict":
@@ -135,7 +135,8 @@ class FileBackedDict(UserDict[str, Any]):
         return self
 
     def to_dict(self) -> Dict[str, Any]:
-        """Recursively converts FileBackedDict instances back to primitive dictionaries."""
+        """Recursively converts FileBackedDict instances back to primitive
+        dictionaries."""
         result: Dict[str, Any] = {}
         for key, value in self.data.items():
             if isinstance(value, FileBackedDict):
@@ -169,7 +170,8 @@ class FileBackedDict(UserDict[str, Any]):
         if fmt == 'json':
             output: str = json.dumps(full_data, indent=4)
         elif fmt == 'yaml':
-            output = yaml.safe_dump(full_data, default_flow_style=False, sort_keys=False)
+            output = yaml.safe_dump(full_data, default_flow_style=False,
+                                    sort_keys=False)
 
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
 
@@ -185,7 +187,10 @@ class FileBackedDict(UserDict[str, Any]):
             raise
 
     def save(self) -> None:
-        """Triggers a partial save targeting only this instance's keys."""
+        """Saves all keys/values back to the original file. If this instance
+        is a child, save only the keys/values in this child and leave parent
+        values unaltered."""
+        # Triggers a partial save targeting only this instance's keys.
         if self._root_saver:
             self._root_saver(self._key_path, self.to_dict())
         else:
