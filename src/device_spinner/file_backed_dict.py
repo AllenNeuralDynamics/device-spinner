@@ -1,15 +1,17 @@
 """A nested saveable dict vibe-coded with Gemini"""
 from collections import UserDict
 from pathlib import Path
-import secrets
 from typing import Any, Callable, Dict, List, Literal, Optional, Union
+import logging
 import json
 import yaml
+import secrets
 
 # Define types for paths and saving callbacks
 KeyPath = List[str]
 SaverCallback = Callable[[Optional[KeyPath], Optional[Dict[str, Any]]], None]
 SupportedFormat = Literal['json', 'yaml']
+
 
 class FileBackedDict(UserDict[str, Any]):
     """Dict with a `save()` method that propagates to subdicts originating from
@@ -85,13 +87,55 @@ class FileBackedDict(UserDict[str, Any]):
         saver: SaverCallback = self._root_saver if self._root_saver else self._save_partial
         if isinstance(value, dict) and not isinstance(value, FileBackedDict):
             child_path: KeyPath = self._key_path + [key]
-            value = FileBackedDict(self.filepath, value, _root_saver=saver,
-                                   _key_path=child_path)
+            value = FileBackedDict(self.filepath, value, _root_saver=saver, _key_path=child_path)
         super().__setitem__(key, value)
 
+    def __or__(self, other: Any) -> "FileBackedDict":
+        """Handles `self | other`. Returns a new FileBackedDict instance."""
+        if not isinstance(other, dict):
+            return NotImplemented
+        # Create a clean combined dictionary structure
+        new_data = self.to_dict()
+        # Ensure we extract data cleanly if 'other' is also a FileBackedDict
+        other_data = other.to_dict() if isinstance(other, FileBackedDict) else other
+        new_data.update(other_data)
+
+        # Return a new instance inheriting the same configurations
+        return FileBackedDict(
+            self.filepath,
+            new_data,
+            _root_saver=self._root_saver,
+            _key_path=self._key_path
+        )
+
+    def __ror__(self, other: Any) -> "FileBackedDict":
+        """Handles `other | self`. Returns a new FileBackedDict instance."""
+        if not isinstance(other, dict):
+            return NotImplemented
+        new_data = other.to_dict() if isinstance(other, FileBackedDict) else dict(other)
+        new_data.update(self.to_dict())
+
+        return FileBackedDict(
+            self.filepath,
+            new_data,
+            _root_saver=self._root_saver,
+            _key_path=self._key_path
+        )
+
+    def __ior__(self, other: Any) -> "FileBackedDict":
+        """Handles `self |= other`. Updates the dictionary in-place."""
+        if not isinstance(other, dict):
+            return NotImplemented
+        other_data = other.to_dict() if isinstance(other, FileBackedDict) else other
+
+        # Update our internal data dictionary
+        self.data.update(other_data)
+        # Re-convert any new raw nested dictionaries into FileBackedDict objects
+        self._convert_nested()
+        return self
+
     def to_dict(self) -> Dict[str, Any]:
-        """Recursively converts FileBackedDict instances back to primitive
-        dictionaries."""
+        """Recursively converts FileBackedDict instances back to primitive dictionaries."""
         result: Dict[str, Any] = {}
         for key, value in self.data.items():
             if isinstance(value, FileBackedDict):
@@ -125,35 +169,23 @@ class FileBackedDict(UserDict[str, Any]):
         if fmt == 'json':
             output: str = json.dumps(full_data, indent=4)
         elif fmt == 'yaml':
-            output = yaml.safe_dump(full_data, default_flow_style=False,
-                                    sort_keys=False)
+            output = yaml.safe_dump(full_data, default_flow_style=False, sort_keys=False)
 
-        # Ensure target directory exists
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
 
-        # --- ATOMIC WRITE ---
-        # Generate a unique temp file name in the target directory to guarantee
-        # they're on the same filesystem
         temp_suffix = f".tmp_{secrets.token_hex(4)}"
         temp_file = self.filepath.with_suffix(self.filepath.suffix + temp_suffix)
 
         try:
-            # 1. Write data to the temporary file completely
             temp_file.write_text(output, encoding='utf-8')
-
-            # 2. Atomically swap/replace the temp file over the target destination file
             temp_file.replace(self.filepath)
         except Exception:
-            # Clean up the temp file if the write process itself failed
             if temp_file.exists():
                 temp_file.unlink()
             raise
 
     def save(self) -> None:
-        """Saves all keys/values back to the original file. If this instance
-        is a child, save only the keys/values in this child and leave parent
-        values unaltered."""
-        # Triggers a partial save targeting only this instance's keys.
+        """Triggers a partial save targeting only this instance's keys."""
         if self._root_saver:
             self._root_saver(self._key_path, self.to_dict())
         else:

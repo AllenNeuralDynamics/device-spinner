@@ -8,13 +8,17 @@
 
 
 Create complex Python objects from dicts and yaml files.
-This library implements the factory design pattern to create objects from a specification file.
+
+`device-spinner` is a "no-framework" implementation of the _inversion of control_ pattern.
+It faciliates stitching together modular classes with dependency injection with no
+performance overhead and without requiring custom decorators, base classes, or any alterations to your code.
 
 ## Why do this?
 Building complex objects from a yaml file:
+* write self-contained modular code and wire it together with a spec in a yaml file.
+* implements [_inversion of control_](https://en.wikipedia.org/wiki/Inversion_of_control) pattern enabling you to write modular code without worrying about how to stitch it together.
 * simplifies simulation, where some objects can be mocked or stubbed out with a specific config.
 * produces a flat view of complex hierarchical objects that take other objects as input (dependency injection).
-* encourages modular, hierarchical design.
 
  
 ## Installation
