@@ -2,7 +2,6 @@
 """Instantiate objects from list of dicts."""
 
 from device_spinner.device_spinner import DeviceSpinner
-import pprint
 
 # Uncomment for some prolific log statements.
 import logging

@@ -2,7 +2,6 @@
 """Instantiate list with *args."""
 
 from device_spinner.device_spinner import DeviceSpinner
-import pprint
 
 import logging
 logging.basicConfig(level=logging.DEBUG)

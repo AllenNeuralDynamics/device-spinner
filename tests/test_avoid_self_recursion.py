@@ -1,5 +1,4 @@
 #!/usr/bin/env/python3
-import pytest
 from device_spinner.device_spinner import DeviceSpinner
 from sys import getrecursionlimit, setrecursionlimit
 

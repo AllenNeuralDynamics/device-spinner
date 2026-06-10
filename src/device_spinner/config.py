@@ -5,7 +5,7 @@ import toml
 import yaml
 import logging
 from pathlib import Path
-from typing import Union, List
+from typing import Union
 
 
 class Config:

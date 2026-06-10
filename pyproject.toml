@@ -1,86 +1,36 @@
-[build-system]
-requires = ["setuptools", "setuptools-scm"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "device-spinner"
+version = "0.0.2"
+readme = "README.md"
 description = "factory pattern for object instantiation from list"
 license = {text = "MIT"}
 requires-python = ">=3.7"
-authors = [
-    {name = "Allen Institute for Neural Dynamics"}
-]
-classifiers = [
-    "Programming Language :: Python :: 3"
-]
-readme = "README.md"
-dynamic = ["version"]
 
 dependencies = [
     "toml >= 0.10.2",
     "ruamel.yaml >= 0.17.35",
+    "pyyaml>=6.0.1",
+    "typing-extensions>=4.7.1",
+    "pydantic>=2.5.3",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    'black',
-    'coverage',
-    'flake8',
-    'interrogate',
-    'isort',
+    "pytest",
+    "ruff>=0.9.9",
+]
+docs = [
     'Sphinx',
     'furo'
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[build-system]
+requires = ["uv_build>=0.8.22,<0.9.0"]
+build-backend = "uv_build"
 
-[tool.setuptools.dynamic]
-version = {attr = "device_spinner.__version__"}
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
+addopts = "--doctest-modules --ignore=examples/load_instrument_config.py"
 
-[tool.black]
-line-length = 79
-target_version = ['py36']
-exclude = '''
-
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | build
-    | dist
-  )/
-  | .gitignore
-)
-'''
-
-[tool.coverage.run]
-omit = ["*__init__*"]
-source = ["device_spinner", "tests"]
-
-[tool.coverage.report]
-exclude_lines = [
-    "if __name__ == .__main__.:",
-    "from",
-    "import",
-    "pragma: no cover"
-]
-fail_under = 100
-
-[tool.isort]
-line_length = 79
-profile = "black"
-
-[tool.interrogate]
-exclude = ["setup.py", "docs", "build"]
-fail-under = 100
-
-[dependency-groups]
-dev = [
-    "pytest>=7.4.4",
-]
+[tool.ruff]
+line-length = 88

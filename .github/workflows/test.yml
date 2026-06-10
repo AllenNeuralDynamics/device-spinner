@@ -1,0 +1,11 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  call-deployment-job:
+    uses: AllenNeuralDynamics/.github/blob/main/.github/workflows/test.yml@main
