@@ -7,5 +7,7 @@ on:
       - dev
 
 jobs:
-  call-deployment-job:
-    uses: AllenNeuralDynamics/.github/blob/main/.github/workflows/test.yml@main
+  test:
+    uses: AllenNeuralDynamics/.github/.github/workflows/test.yml@main
+    with:
+      runner_label: 'ubuntu-latest'
