@@ -4,6 +4,7 @@ import copy
 import importlib
 import logging
 from typing import Union, Any
+from device_spinner.models import DeviceTrees
 
 ARGUMENTS = "args"
 SKIP_ARGUMENTS = "skip_args"    # List of args with names identical to instance
@@ -34,6 +35,7 @@ class DeviceSpinner:
         """Create object instances from specifications. If `overrides` are
         specified, apply them first.
         """
+        DeviceTrees.model_validate(spec_trees)
         # Populate devices with any externally created instances first to
         # satisfy dependencies.
         if overrides:

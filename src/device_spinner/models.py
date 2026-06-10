@@ -25,7 +25,7 @@ class DeviceSpec(BaseModel):
             if self.class_name is not None:
                 module_path, _ = self.class_name.rsplit(".", 1)
             elif self.factory is not None:
-                module_path, _ = self.class_name.rsplit(".", 1)
+                module_path, _ = self.factory.rsplit(".", 1)
         else:
             module_path = self.module_name
         return module_path
