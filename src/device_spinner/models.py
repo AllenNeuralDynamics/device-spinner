@@ -1,10 +1,44 @@
 from inspect import signature
 from functools import cached_property
-from pydantic import BaseModel, RootModel, Field, model_validator
+from pydantic import BaseModel, RootModel, Field, model_validator, ConfigDict
 from typing import Optional, Any, Self, Callable
 import importlib
 
 class DeviceSpec(BaseModel):
+    """
+    Examples
+    --------
+    >>> data = {'module': 'builtins', 'class': 'dict', 'kwargs': {'key0': 'MyVal'}}
+    >>> DeviceSpec.model_validate(data).model_dump(exclude_none=True)
+    {'module_name': 'builtins', 'class_name': 'dict', 'kwargs': {'key0': 'MyVal'}}
+
+    >>> data = {'module': '', 'class': 'dict', 'kwargs': {'key0': 'MyVal'}}
+    >>> DeviceSpec.model_validate(data) # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    pydantic_core._pydantic_core.ValidationError: ...
+
+    >>> data = {'class': 'dict', 'kwargs': {'key0': 'MyVal'}}
+    >>> DeviceSpec.model_validate(data) # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    pydantic_core._pydantic_core.ValidationError: ...
+
+    >>> data = {'class': 'builtins.dict', 'factory': 'builtins.dict', 'kwargs': {'key0': 'MyVal'}}
+    >>> DeviceSpec.model_validate(data) # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    pydantic_core._pydantic_core.ValidationError: ...
+
+    >>> data = {'kwargs': {'key0': 'MyVal'}}
+    >>> DeviceSpec.model_validate(data) # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    pydantic_core._pydantic_core.ValidationError: ...
+    """
+    # Enable the model to accept either 'kwds' or 'kwargs'
+    model_config = ConfigDict(populate_by_name=True)
+
     module_name: Optional[str] = Field(alias="module", default=None)
     class_name: Optional[str] = Field(alias="class", default=None)
     factory: Optional[str] = None

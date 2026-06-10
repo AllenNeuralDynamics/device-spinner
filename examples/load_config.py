@@ -3,9 +3,11 @@
 
 from device_spinner.config import Config
 from device_spinner.device_spinner import DeviceSpinner
+from pathlib import Path
 
 import logging
 import pprint
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.StreamHandler())
@@ -13,7 +15,8 @@ logger.handlers[-1].setFormatter(
    logging.Formatter(fmt='%(asctime)s:%(levelname)s: %(message)s'))
 
 
-device_config = Config("sample_config.yaml")
+script_dir = Path(__file__).resolve().parent
+device_config = Config(script_dir / "sample_config.yaml")
 # TODO: make a to_dict function.
 device_specs = dict(device_config.cfg)
 pprint.pprint(device_specs)

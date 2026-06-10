@@ -30,6 +30,7 @@ build-backend = "uv_build"
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests"]
+addopts = "--doctest-modules --ignore=examples/load_instrument_config.py"
 
 [tool.ruff]
 line-length = 88

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Instantiate objects from list of dicts."""
+"""Instantiate objects from list of dicts.
+This example must be run from its parent folder"""
 
 from device_spinner.config import Config
 from device_spinner.device_spinner import DeviceSpinner
