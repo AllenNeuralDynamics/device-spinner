@@ -132,7 +132,7 @@ class DeviceSpec(BaseModel):
     # TODO: Validate signature.
 
 
-class DeviceTrees(RootModel[dict[str, DeviceSpec]]):
+class DeviceTrees(RootModel[dict[str, Optional[DeviceSpec]]]):
 
     @model_validator(mode='after')
     def validate_dependency_existence(self) -> Self:
