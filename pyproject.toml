@@ -1,6 +1,6 @@
 [project]
 name = "device-spinner"
-version = "0.0.4"
+version = "0.0.5"
 readme = "README.md"
 description = "factory pattern for object instantiation from list"
 license = {text = "MIT"}
