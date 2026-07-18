@@ -1,14 +1,32 @@
 from abc import ABC, abstractmethod
 from collections import UserDict
-from typing import Any, Callable, Dict, List, Optional, Protocol
+from typing import Any, Callable, Dict, Iterator, List, overload, Optional, Protocol, TypeVar
 
 KeyPath = List[str]
 SaverCallback = Callable[[Optional[KeyPath], Optional[Dict[str, Any]]], None]
 
+K = TypeVar("K")  # Key type
+V = TypeVar("V")  # Value type
+T = TypeVar("T")  # Fallback default type
 
 class SaveableDict(Protocol):
     """Dict with an included save function."""
+    def __getitem__(self, key: str) -> Any: ...
+    def __setitem__(self, key: str, value: Any) -> None: ...
+    def __iter__(self) -> Iterator[str]: ...
+
+    @overload
+    def get(self, key: K) -> V | None:
+        ...
+
+    @overload
+    def get(self, key: K, default: T) -> V | T:
+        ...
+
     def save(self) -> None:
+        ...
+
+    def to_dict(self) -> None:
         ...
 
 
@@ -96,6 +114,7 @@ class AbstractPersistentDict(UserDict[str, Any], ABC):
         super().__setitem__(key, self._wrap_value(key, value))
 
     def update(self, *args: Any, **kwargs: Any) -> None:
+        # Limited update for just single dict-like objects.
         other = dict(*args, **kwargs)
         for k, v in other.items():
             self[k] = v
