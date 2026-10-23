@@ -123,8 +123,8 @@ class DeviceSpec(BaseModel):
     def validate_module_import(self) -> Self:
         try:
             importlib.import_module(self.module_path)
-        except ImportError:
-            raise ValueError(f"module: {self.module_path} does not exist.")
+        except ImportError as e:
+            raise ValueError(f"Error importing module: {self.module_path}. Error: {e}")
         return self
 
     # TODO: Validate constructor exists.
