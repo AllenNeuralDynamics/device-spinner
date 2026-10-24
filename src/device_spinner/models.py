@@ -1,16 +1,27 @@
 from inspect import signature
 from functools import cached_property
-from pydantic import BaseModel, RootModel, Field, model_validator, ConfigDict
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    RootModel,
+    Field,
+    model_serializer,
+    model_validator,
+    SerializerFunctionWrapHandler,
+    SerializationInfo
+)
 from typing import Optional, Any, Self, Callable
 import importlib
+
+from pydantic_core.core_schema import SerializationInfo
 
 class DeviceSpec(BaseModel):
     """
     Examples
     --------
-    >>> data = {'module': 'builtins', 'class': 'dict', 'kwargs': {'key0': 'MyVal'}}
-    >>> DeviceSpec.model_validate(data).model_dump(exclude_none=True)
-    {'module_name': 'builtins', 'class_name': 'dict', 'kwargs': {'key0': 'MyVal'}}
+    >>> data = {'module': 'builtins', 'class': 'dict', 'kwds': {'key0': 'MyVal'}}
+    >>> DeviceSpec.model_validate(data).model_dump()
+    {'module': 'builtins', 'class': 'dict', 'kwds': {'key0': 'MyVal'}}
 
     >>> data = {'module': '', 'class': 'dict', 'kwargs': {'key0': 'MyVal'}}
     >>> DeviceSpec.model_validate(data) # doctest: +ELLIPSIS
@@ -36,8 +47,9 @@ class DeviceSpec(BaseModel):
         ...
     pydantic_core._pydantic_core.ValidationError: ...
     """
-    # Enable the model to accept either 'kwds' or 'kwargs'
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(
+        validate_by_name=True, # Accept name or alias (i.e: 'kwds' or 'kwargs')
+        serialize_by_alias=True)  # Serializing will use the alias
 
     module_name: Optional[str] = Field(alias="module", default=None)
     class_name: Optional[str] = Field(alias="class", default=None)
@@ -126,6 +138,27 @@ class DeviceSpec(BaseModel):
         except ImportError as e:
             raise ValueError(f"Error importing module: {self.module_path}. Error: {e}")
         return self
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self,
+        handler: SerializerFunctionWrapHandler,
+        info: SerializationInfo
+    ):
+        """Custom serializer that applies exclude_unset=True"""
+        result = handler(self)
+        # apply exclude_unset=True after-the-fact because we cannot inject it
+        # into the handler.
+        if isinstance(result, dict):
+            # Deduce which keys were set, and handle serialization with aliases.
+            allowed_keys = set(self.model_fields_set)
+            by_alias = (info.by_alias if info.by_alias is not None else
+                self.model_config.get("serialize_by_alias", False))
+            if by_alias:
+                allowed_keys = {type(self).model_fields[field].alias
+                                for field in allowed_keys}
+            # Filter the dict to only keys present in the model's assigned field set
+            return {k: v for k, v in result.items() if k in allowed_keys}
+        return result
 
     # TODO: Validate constructor exists.
     # TODO: Validate input arg/kwarg types.
